@@ -1,7 +1,6 @@
 package com.herb.macondo.map;
 
 import com.herb.macondo.map.controller.GameController;
-import com.herb.macondo.map.input.InputHandler;
 import com.herb.macondo.map.model.GameModel;
 import com.herb.macondo.map.view.GameView;
 import javafx.application.Application;
@@ -16,21 +15,15 @@ public class Main extends Application {
         Canvas canvas = new Canvas(800, 600);
         GameModel model = new GameModel();
         GameView view = new GameView(canvas);
-        InputHandler inputHandler = new InputHandler();
-        GameController controller = new GameController(model, view, inputHandler);
 
         StackPane root = new StackPane(canvas);
         Scene scene = new Scene(root, 800, 600);
 
-        scene.setOnKeyPressed(e -> inputHandler.keyPressed(e.getCode()));
-        scene.setOnKeyReleased(e -> inputHandler.keyReleased(e.getCode()));
+        GameController controller = new GameController(model, view, scene);
 
         primaryStage.setTitle("Macondo");
         primaryStage.setScene(scene);
         primaryStage.show();
-        
-        // Ensure the canvas/scene has focus for input
-        canvas.requestFocus();
 
         controller.start();
     }
