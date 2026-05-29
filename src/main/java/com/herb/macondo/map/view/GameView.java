@@ -2,6 +2,8 @@ package com.herb.macondo.map.view;
 
 import com.herb.macondo.map.model.GameModel;
 import com.herb.macondo.map.model.Obstacle;
+import com.herb.macondo.map.model.Enemy;
+import com.herb.macondo.map.model.Projectile;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
@@ -30,9 +32,6 @@ public class GameView {
         double playerScreenX = model.getPlayerX() - cameraX;
         double playerScreenY = model.getPlayerY() - cameraY;
 
-        gc.setFill(Color.BLUE);
-        gc.fillRect(playerScreenX - 15, playerScreenY - 15, 30, 30);
-
         for (Obstacle obs : model.getObstacles()) {
             double screenX = obs.getX() - cameraX;
             double screenY = obs.getY() - cameraY;
@@ -40,7 +39,36 @@ public class GameView {
             gc.fillRect(screenX, screenY, obs.getWidth(), obs.getHeight());
         }
 
+        for (Enemy enemy : model.getEnemies()) {
+            double screenX = enemy.getX() - cameraX;
+            double screenY = enemy.getY() - cameraY;
+            gc.setFill(Color.RED);
+            gc.fillRect(screenX - enemy.getWidth()/2, screenY - enemy.getHeight()/2, enemy.getWidth(), enemy.getHeight());
+
+            double healthPercent = enemy.getHealth() / enemy.getMaxHealth();
+            gc.setFill(Color.GREEN);
+            gc.fillRect(screenX - enemy.getWidth()/2, screenY - enemy.getHeight()/2 - 8, enemy.getWidth() * healthPercent, 4);
+        }
+
+        for (Projectile p : model.getProjectiles()) {
+            double screenX = p.getX() - cameraX;
+            double screenY = p.getY() - cameraY;
+            gc.setFill(Color.YELLOW);
+            gc.fillOval(screenX - p.getSize()/2, screenY - p.getSize()/2, p.getSize(), p.getSize());
+        }
+
+        gc.setFill(Color.BLUE);
+        gc.fillRect(playerScreenX - 15, playerScreenY - 15, 30, 30);
+
+        double healthPercent = model.getPlayerHealth() / model.getPlayerMaxHealth();
+        gc.setFill(Color.RED);
+        gc.fillRect(playerScreenX - 20, playerScreenY - 25, 40, 6);
+        gc.setFill(Color.GREEN);
+        gc.fillRect(playerScreenX - 20, playerScreenY - 25, 40 * healthPercent, 6);
+
         gc.setFill(Color.WHITE);
+        gc.fillText("HP: " + (int)model.getPlayerHealth() + " / " + (int)model.getPlayerMaxHealth(), 10, 50);
         gc.fillText(modeText.getText(), 10, 20);
     }
 }
+

@@ -18,40 +18,19 @@ public class GameModel {
 
     private double playerHealth = 100;
     private double playerMaxHealth = 100;
-    private int playerLevel = 1;
-    private double currentExp = 0;
-    private double expToNextLevel = 100;
 
     private List<Enemy> enemies = new ArrayList<>();
     private List<Projectile> projectiles = new ArrayList<>();
-    private List<ExpOrb> expOrbs = new ArrayList<>();
-    private List<PowerCube> powerCubes = new ArrayList<>();
 
-    private double rocketCooldown = 0;
-    private boolean rocketUnlocked = false;
-    private List<Dagger> daggers = new ArrayList<>();
-
+    private double projectileCooldown = 0;
+    private double projectileCooldownMax = 0.3;
     private double damageMultiplier = 1.0;
     private int extraProjectiles = 0;
     private double fireRateMultiplier = 1.0;
 
     public GameModel() {
         generateRandomObstacles();
-        initializePlayerStats();
-    }
-
-    private void initializePlayerStats() {
-        playerHealth = 100;
-        playerMaxHealth = 100;
-        playerLevel = 1;
-        currentExp = 0;
-        expToNextLevel = 100;
-        damageMultiplier = 1.0;
-        extraProjectiles = 0;
-        fireRateMultiplier = 1.0;
-        rocketUnlocked = false;
-        rocketCooldown = 0;
-        daggers.clear();
+        spawnInitialEnemy();
     }
 
     private void generateRandomObstacles() {
@@ -64,67 +43,38 @@ public class GameModel {
         }
     }
 
-    public void addExp(double amount) {
-        currentExp += amount;
-        while (currentExp >= expToNextLevel) {
-            currentExp -= expToNextLevel;
-            playerLevel++;
-            expToNextLevel = 100 + (playerLevel - 1) * 50;
+    private void spawnInitialEnemy() {
+        enemies.add(new Enemy(600, 500));
+    }
+
+    public void shootProjectile(double mouseWorldX, double mouseWorldY) {
+        if (projectileCooldown > 0) return;
+        double damage = 15 * damageMultiplier;
+        Projectile p = new Projectile(playerX, playerY, mouseWorldX, mouseWorldY, damage);
+        projectiles.add(p);
+
+        if (extraProjectiles > 0) {
+            double angleOffset = Math.PI / 6;
+            double baseAngle = Math.atan2(mouseWorldY - playerY, mouseWorldX - playerX);
+            for (int i = 0; i < extraProjectiles; i++) {
+                double offset = (i - extraProjectiles / 2.0) * angleOffset;
+                double angle = baseAngle + offset;
+                double dx = Math.cos(angle) * 500;
+                double dy = Math.sin(angle) * 500;
+                Projectile p2 = new Projectile(playerX, playerY, playerX + dx, playerY + dy, damage);
+                projectiles.add(p2);
+            }
         }
+        projectileCooldown = projectileCooldownMax * fireRateMultiplier;
     }
 
-    public void healPlayer(double amount) {
-        playerHealth += amount;
-        if (playerHealth > playerMaxHealth) playerHealth = playerMaxHealth;
-    }
-
-    public void increaseMaxHealth(double amount) {
-        playerMaxHealth += amount;
-        playerHealth += amount;
-    }
-
-    public void applyUpgrade(Upgrade upgrade) {
-        switch (upgrade.getType()) {
-            case DAMAGE:
-                damageMultiplier += 0.2;
-                break;
-            case PROJECTILE_COUNT:
-                extraProjectiles++;
-                break;
-            case FIRE_RATE:
-                fireRateMultiplier *= 0.9;
-                break;
-            case MAX_HEALTH:
-                increaseMaxHealth(20);
-                break;
-            case ROCKET:
-                rocketUnlocked = true;
-                break;
-            case DAGGER:
-                daggers.add(new Dagger());
-                break;
-        }
+    public void updateCooldowns(double deltaTime) {
+        if (projectileCooldown > 0) projectileCooldown -= deltaTime;
     }
 
     public void damagePlayer(double amount) {
         playerHealth -= amount;
         if (playerHealth < 0) playerHealth = 0;
-    }
-
-    public boolean isPlayerDead() {
-        return playerHealth <= 0;
-    }
-
-    public void resetGame() {
-        playerX = 400;
-        playerY = 300;
-        initializePlayerStats();
-        enemies.clear();
-        projectiles.clear();
-        expOrbs.clear();
-        powerCubes.clear();
-        daggers.clear();
-        rocketCooldown = 0;
     }
 
     public double getPlayerX() { return playerX; }
@@ -139,20 +89,11 @@ public class GameModel {
     public List<Obstacle> getObstacles() { return obstacles; }
     public double getPlayerHealth() { return playerHealth; }
     public double getPlayerMaxHealth() { return playerMaxHealth; }
-    public int getPlayerLevel() { return playerLevel; }
-    public double getCurrentExp() { return currentExp; }
-    public double getExpToNextLevel() { return expToNextLevel; }
     public List<Enemy> getEnemies() { return enemies; }
     public List<Projectile> getProjectiles() { return projectiles; }
-    public List<ExpOrb> getExpOrbs() { return expOrbs; }
-    public List<PowerCube> getPowerCubes() { return powerCubes; }
     public double getDamageMultiplier() { return damageMultiplier; }
     public int getExtraProjectiles() { return extraProjectiles; }
     public double getFireRateMultiplier() { return fireRateMultiplier; }
-    public boolean isRocketUnlocked() { return rocketUnlocked; }
-    public double getRocketCooldown() { return rocketCooldown; }
-    public void setRocketCooldown(double cd) { rocketCooldown = cd; }
-    public List<Dagger> getDaggers() { return daggers; }
 
     public void movePlayer(double dx, double dy, double screenWidth, double screenHeight) {
         double newX = playerX + dx;
@@ -169,3 +110,4 @@ public class GameModel {
         }
     }
 }
+

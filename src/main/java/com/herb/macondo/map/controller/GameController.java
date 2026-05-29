@@ -2,12 +2,17 @@ package com.herb.macondo.map.controller;
 
 import com.herb.macondo.map.input.InputHandler;
 import com.herb.macondo.map.model.GameModel;
+import com.herb.macondo.map.model.Enemy;
+import com.herb.macondo.map.model.Projectile;
 import com.herb.macondo.map.view.GameView;
 import com.herb.macondo.map.util.CollisionDetector;
 import javafx.animation.AnimationTimer;
 import javafx.scene.Scene;
 import javafx.scene.input.MouseButton;
 import javafx.scene.text.Text;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class GameController {
     private GameModel model;
@@ -47,8 +52,10 @@ public class GameController {
         });
 
         scene.setOnMouseClicked(e -> {
-            if (e.getButton() == MouseButton.PRIMARY) {
-                System.out.println("Shoot later");
+            if (e.getButton() == MouseButton.PRIMARY && !model.isUseMouseControl()) {
+                double mouseWorldX = e.getX() + view.getCameraX();
+                double mouseWorldY = e.getY() + view.getCameraY();
+                model.shootProjectile(mouseWorldX, mouseWorldY);
             }
         });
 
@@ -118,5 +125,43 @@ public class GameController {
                 model.movePlayer(0, moveY, 800, 600);
             }
         }
+
+        model.updateCooldowns(deltaTime);
+
+        for (Enemy enemy : model.getEnemies()) {
+            enemy.moveTowards(model.getPlayerX(), model.getPlayerY(), deltaTime);
+
+            double dxEnemy = model.getPlayerX() - enemy.getX();
+            double dyEnemy = model.getPlayerY() - enemy.getY();
+            double distance = Math.hypot(dxEnemy, dyEnemy);
+
+            if (distance < (enemy.getWidth() / 2 + 15)) {
+                model.damagePlayer(enemy.getDamage());
+                double angle = Math.atan2(dyEnemy, dxEnemy);
+                double knockX = Math.cos(angle) * 30;
+                double knockY = Math.sin(angle) * 30;
+                model.setPlayerX(model.getPlayerX() + knockX);
+                model.setPlayerY(model.getPlayerY() + knockY);
+            }
+        }
+
+        for (Projectile p : model.getProjectiles()) {
+            p.update(deltaTime);
+        }
+        model.getProjectiles().removeIf(p -> !p.isActive());
+
+        for (Projectile p : model.getProjectiles()) {
+            for (Enemy enemy : model.getEnemies()) {
+                double dxEnemy = p.getX() - enemy.getX();
+                double dyEnemy = p.getY() - enemy.getY();
+                double distance = Math.hypot(dxEnemy, dyEnemy);
+                if (distance < (enemy.getWidth() / 2 + p.getSize() / 2)) {
+                    enemy.takeDamage(p.getDamage());
+                    p.setActive(false);
+                    break;
+                }
+            }
+        }
+        model.getEnemies().removeIf(enemy -> !enemy.isAlive());
     }
 }
