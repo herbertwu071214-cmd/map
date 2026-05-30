@@ -21,12 +21,20 @@ public class GameModel {
 
     private List<Enemy> enemies = new ArrayList<>();
     private List<Projectile> projectiles = new ArrayList<>();
+    private List<ExpOrb> expOrbs = new ArrayList<>();
 
     private double projectileCooldown = 0;
     private double projectileCooldownMax = 0.3;
     private double damageMultiplier = 1.0;
     private int extraProjectiles = 0;
     private double fireRateMultiplier = 1.0;
+
+    private int playerLevel = 1;
+    private double currentExp = 0;
+    private double expToNextLevel = 100;
+
+    private boolean upgradePending = false;
+    private List<Upgrade> upgradeChoices = new ArrayList<>();
 
     public GameModel() {
         generateRandomObstacles();
@@ -77,6 +85,76 @@ public class GameModel {
         if (playerHealth < 0) playerHealth = 0;
     }
 
+    public void addExp(double amount) {
+        currentExp += amount;
+        while (currentExp >= expToNextLevel) {
+            currentExp -= expToNextLevel;
+            playerLevel++;
+            expToNextLevel = 100 + (playerLevel - 1) * 50;
+            prepareUpgradeChoices();
+        }
+    }
+
+    private void prepareUpgradeChoices() {
+        upgradeChoices.clear();
+        List<Upgrade.UpgradeType> types = List.of(
+                Upgrade.UpgradeType.DAMAGE,
+                Upgrade.UpgradeType.PROJECTILE_COUNT,
+                Upgrade.UpgradeType.FIRE_RATE,
+                Upgrade.UpgradeType.MAX_HEALTH
+        );
+        java.util.Collections.shuffle(types);
+        for (int i = 0; i < Math.min(3, types.size()); i++) {
+            upgradeChoices.add(new Upgrade(types.get(i)));
+        }
+        upgradePending = true;
+    }
+
+    public void applyUpgrade(Upgrade upgrade) {
+        switch (upgrade.getType()) {
+            case DAMAGE:
+                damageMultiplier += 0.2;
+                break;
+            case PROJECTILE_COUNT:
+                extraProjectiles++;
+                break;
+            case FIRE_RATE:
+                fireRateMultiplier *= 0.9;
+                break;
+            case MAX_HEALTH:
+                playerMaxHealth += 20;
+                playerHealth += 20;
+                break;
+            default:
+                break;
+        }
+        upgradePending = false;
+    }
+
+    public void spawnExpOrb(double x, double y, double value) {
+        expOrbs.add(new ExpOrb(x, y, value));
+    }
+
+    public void collectExpOrbs() {
+        expOrbs.removeIf(orb -> {
+            double dx = orb.getX() - playerX;
+            double dy = orb.getY() - playerY;
+            if (Math.hypot(dx, dy) < 20) {
+                addExp(orb.getValue());
+                return true;
+            }
+            return false;
+        });
+    }
+
+    public void updateExpOrbs(double deltaTime) {
+        for (ExpOrb orb : expOrbs) {
+            orb.moveTowards(playerX, playerY, deltaTime);
+        }
+        collectExpOrbs();
+    }
+
+    // Getters
     public double getPlayerX() { return playerX; }
     public double getPlayerY() { return playerY; }
     public void setPlayerX(double x) { playerX = x; }
@@ -91,9 +169,15 @@ public class GameModel {
     public double getPlayerMaxHealth() { return playerMaxHealth; }
     public List<Enemy> getEnemies() { return enemies; }
     public List<Projectile> getProjectiles() { return projectiles; }
+    public List<ExpOrb> getExpOrbs() { return expOrbs; }
     public double getDamageMultiplier() { return damageMultiplier; }
     public int getExtraProjectiles() { return extraProjectiles; }
     public double getFireRateMultiplier() { return fireRateMultiplier; }
+    public int getPlayerLevel() { return playerLevel; }
+    public double getCurrentExp() { return currentExp; }
+    public double getExpToNextLevel() { return expToNextLevel; }
+    public boolean isUpgradePending() { return upgradePending; }
+    public List<Upgrade> getUpgradeChoices() { return upgradeChoices; }
 
     public void movePlayer(double dx, double dy, double screenWidth, double screenHeight) {
         double newX = playerX + dx;

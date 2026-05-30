@@ -4,15 +4,14 @@ import com.herb.macondo.map.input.InputHandler;
 import com.herb.macondo.map.model.GameModel;
 import com.herb.macondo.map.model.Enemy;
 import com.herb.macondo.map.model.Projectile;
+import com.herb.macondo.map.model.Upgrade;
 import com.herb.macondo.map.view.GameView;
+import com.herb.macondo.map.view.UpgradeMenuView;
 import com.herb.macondo.map.util.CollisionDetector;
 import javafx.animation.AnimationTimer;
 import javafx.scene.Scene;
 import javafx.scene.input.MouseButton;
 import javafx.scene.text.Text;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class GameController {
     private GameModel model;
@@ -21,6 +20,8 @@ public class GameController {
     private AnimationTimer gameLoop;
     private Scene scene;
     private Text modeText;
+    private boolean paused = false;
+    private UpgradeMenuView upgradeMenuView;
 
     public GameController(GameModel model, GameView view, Scene scene) {
         this.model = model;
@@ -28,6 +29,7 @@ public class GameController {
         this.scene = scene;
         this.input = new InputHandler();
         this.modeText = new Text();
+        this.upgradeMenuView = new UpgradeMenuView();
         modeText.setFill(javafx.scene.paint.Color.WHITE);
         modeText.setX(10);
         modeText.setY(20);
@@ -40,11 +42,14 @@ public class GameController {
                 model.setUseMouseControl(!model.isUseMouseControl());
                 updateModeText();
             }
+            if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
+                paused = !paused;
+            }
         });
         scene.setOnKeyReleased(e -> input.keyReleased(e.getCode()));
 
         scene.setOnMouseMoved(e -> {
-            if (model.isUseMouseControl()) {
+            if (model.isUseMouseControl() && !paused) {
                 double mouseWorldX = e.getX() + view.getCameraX();
                 double mouseWorldY = e.getY() + view.getCameraY();
                 model.setPlayerPosition(mouseWorldX, mouseWorldY);
@@ -52,7 +57,7 @@ public class GameController {
         });
 
         scene.setOnMouseClicked(e -> {
-            if (e.getButton() == MouseButton.PRIMARY && !model.isUseMouseControl()) {
+            if (e.getButton() == MouseButton.PRIMARY && !model.isUseMouseControl() && !paused) {
                 double mouseWorldX = e.getX() + view.getCameraX();
                 double mouseWorldY = e.getY() + view.getCameraY();
                 model.shootProjectile(mouseWorldX, mouseWorldY);
@@ -69,7 +74,7 @@ public class GameController {
                 }
                 double deltaTime = (now - lastUpdate) / 1_000_000_000.0;
                 update(deltaTime);
-                view.render(model, modeText);
+                view.render(model, modeText, paused);
                 lastUpdate = now;
             }
         };
@@ -86,6 +91,19 @@ public class GameController {
     }
 
     private void update(double deltaTime) {
+        if (paused) return;
+
+        if (model.isUpgradePending()) {
+            paused = true;
+            java.util.List<Upgrade> choices = model.getUpgradeChoices();
+            Upgrade selected = upgradeMenuView.showAndWait(choices.get(0), choices.get(1), choices.get(2));
+            if (selected != null) {
+                model.applyUpgrade(selected);
+            }
+            paused = false;
+            return;
+        }
+
         if (model.isUseMouseControl()) {
             return;
         }
@@ -158,10 +176,15 @@ public class GameController {
                 if (distance < (enemy.getWidth() / 2 + p.getSize() / 2)) {
                     enemy.takeDamage(p.getDamage());
                     p.setActive(false);
+                    if (!enemy.isAlive()) {
+                        model.spawnExpOrb(enemy.getX(), enemy.getY(), 20);
+                        model.getEnemies().remove(enemy);
+                    }
                     break;
                 }
             }
         }
-        model.getEnemies().removeIf(enemy -> !enemy.isAlive());
+
+        model.updateExpOrbs(deltaTime);
     }
 }

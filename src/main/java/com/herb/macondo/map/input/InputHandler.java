@@ -39,3 +39,4 @@ public class InputHandler {
         return activeKeys.contains(KeyCode.W) && activeKeys.contains(KeyCode.S);
     }
 }
+

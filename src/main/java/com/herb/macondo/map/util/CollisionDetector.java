@@ -22,3 +22,4 @@ public class CollisionDetector {
         return !collidesWithAnyObstacle(newX, newY, playerWidth, playerHeight, obstacles);
     }
 }
+
